@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "stdbool.h": "c",
+        "interrupt.h": "c",
+        "atmega328p_registers.h": "c",
+        "spi.h": "c",
+        "stdint.h": "c",
+        "registers_atmega328p.h": "c",
+        "spi_atmega328p.h": "c"
+    }
+}
