@@ -17,7 +17,7 @@ typedef struct SPI_handle_t;
 SPI_responsecode_t spi_init(
     SPI_handle_t*   self, 
     GPIO_handle_t*  spi_slave, 
-    SPI_device_t    spi_device 
+    SPI_RegDef_t*   spi_pSPIx 
 );
 
 void spi_config_role(SPI_handle_t* self, SPI_role_t role);
