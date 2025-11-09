@@ -5,10 +5,8 @@
 
 typedef struct 
 {
-    volatile uint8_t*   GPIO_port;
-    volatile uint8_t*   GPIO_ddport;
-    volatile uint8_t*   GPIO_pinreg;
-    uint8_t             GPIO_bit;
+    GPIO_RegDef_t*  GPIO_pGPIOx;
+    uint8_t         GPIO_bit;
 
 }
 GPIO_handle_t;
@@ -45,7 +43,7 @@ typedef enum
 } 
 GPIO_responsecode_t;
 
-GPIO_responsecode_t gpio_init(GPIO_handle_t* self, GPIO_port_t port, uint8_t bit);
+GPIO_responsecode_t gpio_init(GPIO_handle_t* self, GPIO_RegDef_t* pGPIOx, uint8_t bit);
 void gpio_data_direction(GPIO_handle_t* self, GPIO_direction_t dd);
 GPIO_responsecode_t gpio_write(GPIO_handle_t* self, GPIO_state_t state);
 uint8_t gpio_read(GPIO_handle_t* self);

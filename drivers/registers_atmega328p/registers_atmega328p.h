@@ -138,4 +138,14 @@ GPIO_RegDef_t;
 #define GPIOC (GPIO_RegDef_t*)PORTC
 #define GPIOD (GPIO_RegDef_t*)PORTD
 
+typedef struct
+{
+    uint8_t SPCRx;
+    uint8_t SPSRx;
+    uint8_t SPDRx;
+}
+SPI_RegDef_t;
+
+#define SPI0 (GPIO_RegDef_t*)SPCR
+
 #endif
