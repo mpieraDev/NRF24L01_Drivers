@@ -6,22 +6,22 @@
 #include "gpio_atmega328p.h"
 
 #define SPI_DEFAULT_CONFIG(self_ptr) \
-    SPCR = 0; \
-    SPSR = 0; \
+    self_ptr->SPI_pSPIx->SPCRx = 0; \
+    self_ptr->SPI_pSPIx->SPSRx = 0; \
     spi_config_role(self_ptr, SPI_MASTER); \
     spi_config_mode(self_ptr, SPI_MODE0); \
     spi_config_prescaler(self_ptr, SPI_PRESCALER16); \
     spi_config_ddorder(self_ptr, SPI_LSB_FIRST); 
 
-typedef enum 
+/*typedef enum 
 {
     SPI0
 } 
-SPI_device_t;
+SPI_device_t;*/
 
 typedef struct 
 {
-    SPI_device_t    SPI_device;
+    SPI_RegDef_t*   SPI_pSPIx;
     SPI_cfg_t*      SPI_cfg;
     GPIO_handle_t*  SPI_slave_pin; 
 } 
@@ -29,29 +29,20 @@ SPI_handle_t;
 
 // para no corromper el bus spi utilizar metodologia acquirie release (mutex, semafor) 
 // dentro de las funciones que interactuen con el para no corromper la informacion
-// (encadenar bits de transacciones diferentes)
-
-// cambiar config para que sean todos individuales y usar spi_register_t
+// (encadenar bits de transacciones diferentes, como consequencia data erronea)
 
 SPI_responsecode_t spi_init(
     SPI_handle_t*   self, 
     GPIO_handle_t*  spi_slave, 
-    SPI_device_t    spi_device
+    SPI_RegDef_t*   spi_pSPIx
 ) 
-{
-    if (spi_device == SPI0)
-    {
-        SPI_DEFAULT_CONFIG(self)
+{   
+    self->SPI_pSPIx = spi_pSPIx;
+    self->SPI_slave_pin = spi_slave; 
 
-        self->SPI_slave_pin = spi_slave;
+    SPI_DEFAULT_CONFIG(self)
 
-        self->SPI_device = SPI0;
-
-
-        return SPI_OK;
-    }
-
-    return SPI_ERR;
+    return SPI_OK;
 }
 
 // asegurarse de que inicializa los campos que necesita que sean 
@@ -67,7 +58,7 @@ void spi_config_role(SPI_handle_t* self, SPI_role_t role)
             PORTB |= (1 << SS); 
             gpio_data_direction(self->SPI_slave_pin, GPIO_OUTPUT);
 
-            SPCR |= (1 << MSTR);
+            self->SPI_pSPIx->SPCRx |= (1 << MSTR);
             break;
 
         case SPI_SLAVE:
@@ -76,7 +67,7 @@ void spi_config_role(SPI_handle_t* self, SPI_role_t role)
             gpio_data_direction(self->SPI_slave_pin, GPIO_INPUT);
             gpio_write(self->SPI_slave_pin, GPIO_HIGH);
 
-            SPCR &= ~(1 << MSTR);
+            self->SPI_pSPIx->SPCRx &= ~(1 << MSTR);
             break;
     }
 }
@@ -90,21 +81,21 @@ void spi_config_mode(SPI_handle_t* self, SPI_mode_t mode)
     switch (mode) 
     {
         case SPI_MODE0: 
-            SPCR &= ~((1 << CPOL) | (1 << CPHA)); 
+            self->SPI_pSPIx->SPCRx &= ~((1 << CPOL) | (1 << CPHA)); 
             break;
 
         case SPI_MODE1: 
-            SPCR &= ~(1 << CPOL);
-            SPCR |= (1<< CPHA);
+            self->SPI_pSPIx->SPCRx &= ~(1 << CPOL);
+            self->SPI_pSPIx->SPCRx |= (1<< CPHA);
             break;
 
         case SPI_MODE2: 
-            SPCR |= (1 << CPOL);
-            SPCR &= ~(1<< CPHA);
+            self->SPI_pSPIx->SPCRx |= (1 << CPOL);
+            self->SPI_pSPIx->SPCRx &= ~(1<< CPHA);
             break;
 
         case SPI_MODE3: 
-            SPCR |= (1 << CPOL) | (1 << CPHA); 
+            self->SPI_pSPIx->SPCRx |= (1 << CPOL) | (1 << CPHA); 
             break;
     }
 }
@@ -118,42 +109,42 @@ void spi_config_prescaler(SPI_handle_t* self, SPI_prescaler_t prescaler)
     switch (prescaler) 
     {
         case SPI_PRESCALER2:
-            SPCR &= ~((1 << SPR0) | (1 << SPR1));
-            SPSR |= (1 << SPI2X);
+            self->SPI_pSPIx->SPCRx &= ~((1 << SPR0) | (1 << SPR1));
+            self->SPI_pSPIx->SPSRx |= (1 << SPI2X);
             break;
         
         case SPI_PRESCALER4:
-            SPCR &= ~((1 << SPR0) | (1 << SPR1));
-            SPSR &= ~(1 << SPI2X);
+            self->SPI_pSPIx->SPCRx &= ~((1 << SPR0) | (1 << SPR1));
+            self->SPI_pSPIx->SPSRx &= ~(1 << SPI2X);
             break;
 
         case SPI_PRESCALER8:
-            SPCR &= ~(1 << SPR1);
-            SPCR |= (1 << SPR0);
-            SPSR |= (1 << SPI2X);
+            self->SPI_pSPIx->SPCRx &= ~(1 << SPR1);
+            self->SPI_pSPIx->SPCRx |= (1 << SPR0);
+            self->SPI_pSPIx->SPSRx |= (1 << SPI2X);
             break;
 
         case SPI_PRESCALER16:
-            SPCR &= ~(1 << SPR1);
-            SPCR |= (1 << SPR0);
-            SPSR &= ~(1 << SPI2X);
+            self->SPI_pSPIx->SPCRx &= ~(1 << SPR1);
+            self->SPI_pSPIx->SPCRx |= (1 << SPR0);
+            self->SPI_pSPIx->SPSRx &= ~(1 << SPI2X);
             break;
 
         case SPI_PRESCALER32:
-            SPCR |= (1 << SPR1);
-            SPCR &= ~(1 << SPR0);
-            SPSR |= (1 << SPI2X);
+            self->SPI_pSPIx->SPCRx |= (1 << SPR1);
+            self->SPI_pSPIx->SPCRx &= ~(1 << SPR0);
+            self->SPI_pSPIx->SPSRx |= (1 << SPI2X);
             break;
 
         case SPI_PRESCALER64:
-            SPCR |= (1 << SPR1);
-            SPCR &= ~(1 << SPR0);
-            SPSR &= ~(1 << SPI2X);
+            self->SPI_pSPIx->SPCRx |= (1 << SPR1);
+            self->SPI_pSPIx->SPCRx &= ~(1 << SPR0);
+            self->SPI_pSPIx->SPSRx &= ~(1 << SPI2X);
             break;
             
         case SPI_PRESCALER128:
-            SPCR |= (1 << SPR0) | (1 << SPR1);
-            SPSR &= ~(1 << SPI2X);
+            self->SPI_pSPIx->SPCRx |= (1 << SPR0) | (1 << SPR1);
+            self->SPI_pSPIx->SPSRx &= ~(1 << SPI2X);
             break;
     }
 }
@@ -167,32 +158,32 @@ void spi_config_ddorder(SPI_handle_t* self, SPI_ddorder_t ddorder)
     switch (ddorder)
     {
         case SPI_MSB_FIRST:
-            SPCR &= ~(1 << DORD);
+            self->SPI_pSPIx->SPCRx &= ~(1 << DORD);
             break;
         
         case SPI_LSB_FIRST:
-            SPCR |= (1 << DORD);
+            self->SPI_pSPIx->SPCRx |= (1 << DORD);
             break;
     }
 }
 
 void spi_begin(SPI_handle_t* self)
 {
-    SPCR |= (1 << SPE);
+    self->SPI_pSPIx->SPCRx |= (1 << SPE);
 }
 
 void spi_disable(SPI_handle_t* self)
 {
-    SPCR &= ~(1 << SPE);
+    self->SPI_pSPIx->SPCRx &= ~(1 << SPE);
 }
 
 SPI_responsecode_t spi_master_transmit(SPI_handle_t* self, uint8_t byte)
 { 
     if (!spi_is_master(self)) return SPI_ERR;
     
-    SPDR = byte;
+    self->SPI_pSPIx->SPDRx = byte;
 
-    while(!(SPSR & (1 << SPIF)));
+    while(!(self->SPI_pSPIx->SPSRx & (1 << SPIF)));
 
     return SPI_OK;
 }
@@ -201,11 +192,11 @@ SPI_responsecode_t spi_master_receive(SPI_handle_t* self, uint8_t* byte)
 { 
     if (!spi_is_master(self)) return SPI_ERR;
 
-    SPDR = 0xFF;
+    self->SPI_pSPIx->SPDRx = 0xFF;
 
-    while(!(SPSR & (1 << SPIF)));
+    while(!(self->SPI_pSPIx->SPSRx & (1 << SPIF)));
 
-    *byte = SPDR;
+    *byte = self->SPI_pSPIx->SPDRx;
 
     return SPI_OK;
 }
@@ -214,9 +205,9 @@ SPI_responsecode_t spi_slave_transmit(SPI_handle_t* self, uint8_t byte)
 { 
     if (spi_is_master(self)) return SPI_ERR;
 
-    SPDR = byte;
+    self->SPI_pSPIx->SPDRx = byte;
 
-    while(!(SPSR & (1 << SPIF)));
+    while(!(self->SPI_pSPIx->SPSRx & (1 << SPIF)));
 
     return SPI_OK;
 }
@@ -225,9 +216,9 @@ SPI_responsecode_t spi_slave_receive(SPI_handle_t* self, uint8_t* byte)
 { 
     if (spi_is_master(self)) return SPI_ERR;
 
-    while(!(SPSR & (1 << SPIF)));
+    while(!(self->SPI_pSPIx->SPSRx & (1 << SPIF)));
 
-    *byte = SPDR;
+    *byte = self->SPI_pSPIx->SPDRx;
 
     return SPI_OK;
 }
